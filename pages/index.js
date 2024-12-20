@@ -13,20 +13,58 @@ export default function Home() {
   const isDrawing = useRef(false);
   const startX = useRef(0);
   const startY = useRef(0);
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
 
   useEffect(() => {
     // Fetch existing rectangles from the server
     fetch('/api/rectangles')
-      .then(response => response.json())
-      .then(data => setRectangles(data));
+      .then(response => {
+        if (!response.ok) {
+          console.error('Network response was not ok');
+          return [];
+        }
+        return response.json();
+      })
+      .then(data => setRectangles(data))
+      .catch(error => {
+        console.error('Error fetching rectangles:', error);
+        // Optionally, set an empty array or handle the error state
+        setRectangles([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Control') {
+        setIsCtrlPressed(true);
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      if (event.key === 'Control') {
+        setIsCtrlPressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, []);
 
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
 
+  const onDocumentLoadError = (error) => {
+    console.error('Error loading document:', error);
+  };
+
   const handleMouseDown = (event) => {
-    if (event.ctrlKey) {
+    if (isCtrlPressed) {
       isDrawing.current = true;
       const rect = canvasRef.current.getBoundingClientRect();
       startX.current = event.clientX - rect.left;
@@ -54,6 +92,9 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(newRectangle),
+      }).catch(error => {
+        console.error('Error saving rectangle:', error);
+        // Optionally, handle the error state
       });
     }
   };
@@ -77,7 +118,12 @@ export default function Home() {
       </Head>
 
       <main>
-        <Document file="/example.pdf" onLoadSuccess={onDocumentLoadSuccess}>
+        {console.log('Loading PDF from:', '/example.pdf')}
+        <Document
+          file="/example.pdf"
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={onDocumentLoadError}
+        >
           <Page pageNumber={pageNumber} />
         </Document>
         <canvas
