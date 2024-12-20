@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
   webpack: (config, { isServer }) => {
@@ -15,12 +16,18 @@ module.exports = {
     pagesBufferLength: 2,
   },
   generateBuildId: async () => {
+    const buildIdPath = path.resolve(__dirname, '.next', 'BUILD_ID');
     try {
-      const buildId = fs.readFileSync(path.resolve(__dirname, '.next', 'BUILD_ID'), 'utf8').trim();
+      if (!fs.existsSync(buildIdPath)) {
+        const newBuildId = uuidv4();
+        fs.writeFileSync(buildIdPath, newBuildId, 'utf8');
+        return newBuildId;
+      }
+      const buildId = fs.readFileSync(buildIdPath, 'utf8').trim();
       return buildId;
     } catch (error) {
-      console.error('Error reading BUILD_ID:', error);
-      return null; // Return a default build ID or handle the error as needed
+      console.error('Error handling BUILD_ID:', error);
+      return uuidv4(); // Return a new build ID if there's an error
     }
   },
 };
