@@ -24,6 +24,11 @@ const useStyles = makeStyles({
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     ...shorthands.borderRadius('4px'),
   },
+  hideOnPrint: {
+    '@media print': {
+      display: 'none',
+    },
+  },
 });
 
 import styles from '../styles/Home.module.css';
@@ -154,8 +159,33 @@ export default function Home() {
     setPageNumber(pageNumber < numPages ? pageNumber + 1 : numPages);
   };
 
-  const printDocument = () => {
+  const printDocument = async () => {
+    const pdf = await pdfjs.getDocument('/example.pdf').promise;
+    const printContainer = document.createElement('div');
+    document.body.appendChild(printContainer);
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({ canvasContext: context, viewport: viewport }).promise;
+      const imageDataUrl = canvas.toDataURL('image/png');
+      const image = document.createElement('img');
+      image.src = imageDataUrl;
+
+      const container = document.createElement('div');
+      container.classList.add('page-container');
+      container.appendChild(image);
+
+      printContainer.appendChild(container);
+    }
+
     window.print();
+    document.body.removeChild(printContainer);
   };
 
   return (
@@ -166,7 +196,7 @@ export default function Home() {
       </Head>
 
       <main>
-        <div className={buttonStyles.ribbonBar}>
+        <div className={`${buttonStyles.ribbonBar} ${buttonStyles.hideOnPrint}`}>
           <div className={buttonStyles.wrapper}>
             <Button icon={<ZoomInRegular />} onClick={zoomIn}>Zoom In</Button>
             <Button appearance="primary" icon={<ZoomOutRegular />} onClick={zoomOut}>Zoom Out</Button>
@@ -207,7 +237,8 @@ export default function Home() {
         ))}
       </main>
 
-      <footer>
+      {/* Footer is not included in print */}
+      <footer className={`${buttonStyles.hideOnPrint}`}>
         <a
           href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
           target="_blank"
