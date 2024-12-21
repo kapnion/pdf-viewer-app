@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { pdfjs, Document, Page } from 'react-pdf';
 import Head from 'next/head';
+import { makeStyles, Button, shorthands } from '@fluentui/react-components';
+import { bundleIcon, CalendarMonthFilled, CalendarMonthRegular, ZoomInRegular, ZoomOutRegular, NextRegular, PreviousRegular, DocumentPrintRegular } from '@fluentui/react-icons';
+
+const CalendarMonth = bundleIcon(CalendarMonthFilled, CalendarMonthRegular);
+
+const useStyles = makeStyles({
+  wrapper: {
+    columnGap: '15px',
+    display: 'flex',
+  },
+});
+
 import styles from '../styles/Home.module.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
@@ -15,6 +27,8 @@ export default function Home() {
   const startX = useRef(0);
   const startY = useRef(0);
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+
+  const buttonStyles = useStyles();
 
   useEffect(() => {
     // Fetch existing rectangles from the server
@@ -139,12 +153,12 @@ export default function Home() {
       </Head>
 
       <main>
-        <div className={styles.controls}>
-          <button onClick={zoomIn}>Zoom In</button>
-          <button onClick={zoomOut}>Zoom Out</button>
-          <button onClick={goToPrevPage}>Previous Page</button>
-          <button onClick={goToNextPage}>Next Page</button>
-          <button onClick={printDocument}>Print</button>
+        <div className={buttonStyles.wrapper}>
+          <Button icon={<ZoomInRegular />} onClick={zoomIn}>Zoom In</Button>
+          <Button appearance="primary" icon={<ZoomOutRegular />} onClick={zoomOut}>Zoom Out</Button>
+          <Button appearance="outline" icon={<PreviousRegular />} onClick={goToPrevPage}>Previous Page</Button>
+          <Button appearance="subtle" icon={<NextRegular />} onClick={goToNextPage}>Next Page</Button>
+          <Button appearance="transparent" icon={<DocumentPrintRegular />} onClick={printDocument}>Print</Button>
         </div>
         {console.log('Loading PDF from:', '/example.pdf')}
         <Document
@@ -200,9 +214,6 @@ export default function Home() {
         }
         .controls {
           margin-bottom: 1rem;
-        }
-        .controls button {
-          margin-right: 0.5rem;
         }
         footer {
           width: 100%;
