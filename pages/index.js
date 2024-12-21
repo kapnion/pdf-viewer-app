@@ -67,6 +67,17 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Load rectangles from Local Storage
+    const storedRectangles = JSON.parse(localStorage.getItem('rectangles')) || [];
+    setRectangles(storedRectangles);
+  }, []);
+
+  useEffect(() => {
+    // Save rectangles to Local Storage whenever they change
+    localStorage.setItem('rectangles', JSON.stringify(rectangles));
+  }, [rectangles]);
+
+  useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Control') {
         setIsCtrlPressed(true);
@@ -116,6 +127,7 @@ export default function Home() {
         y: startY.current,
         width: endX - startX.current,
         height: endY - startY.current,
+        color: 'green',
       };
       setRectangles([...rectangles, newRectangle]);
       // Save the new rectangle to the server
@@ -139,6 +151,8 @@ export default function Home() {
       const endX = event.clientX - rect.left;
       const endY = event.clientY - rect.top;
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 2;
       ctx.strokeRect(startX.current, startY.current, endX - startX.current, endY - startY.current);
     }
   };
@@ -206,28 +220,30 @@ export default function Home() {
           </div>
         </div>
         {console.log('Loading PDF from:', '/example.pdf')}
-        <Document
-          file="/example.pdf"
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-        >
-          <Page pageNumber={pageNumber} scale={scale} />
-        </Document>
-        <canvas
-          ref={canvasRef}
-          width={600}
-          height={800}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-          style={{ position: 'absolute', top: 0, left: 0 }}
-        />
+        <div style={{ position: 'relative' }}>
+          <Document
+            file="/example.pdf"
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+          >
+            <Page pageNumber={pageNumber} scale={scale} />
+          </Document>
+          <canvas
+            ref={canvasRef}
+            width={600}
+            height={800}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            style={{ position: 'absolute', top: 0, left: 0, pointerEvents: isCtrlPressed ? 'auto' : 'none' }}
+          />
+        </div>
         {rectangles.map((rect, index) => (
           <div
             key={index}
             style={{
               position: 'absolute',
-              border: '2px solid red',
+              border: `2px solid ${rect.color}`,
               left: rect.x,
               top: rect.y,
               width: rect.width,
