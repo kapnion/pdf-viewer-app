@@ -111,8 +111,8 @@ export default function Home() {
     if (isCtrlPressed) {
       isDrawing.current = true;
       const rect = canvasRef.current.getBoundingClientRect();
-      startX.current = event.clientX - rect.left;
-      startY.current = event.clientY - rect.top;
+      startX.current = (event.clientX - rect.left) / scale;
+      startY.current = (event.clientY - rect.top) / scale;
     }
   };
 
@@ -120,27 +120,18 @@ export default function Home() {
     if (isDrawing.current) {
       isDrawing.current = false;
       const rect = canvasRef.current.getBoundingClientRect();
-      const endX = event.clientX - rect.left;
-      const endY = event.clientY - rect.top;
+      const endX = (event.clientX - rect.left) / scale;
+      const endY = (event.clientY - rect.top) / scale;
       const newRectangle = {
-        x: startX.current,
-        y: startY.current,
-        width: endX - startX.current,
-        height: endY - startY.current,
+        x: startX.current / scale,
+        y: startY.current / scale,
+        width: (endX - startX.current / scale),
+        height: (endY - startY.current / scale),
         color: 'green',
       };
       setRectangles([...rectangles, newRectangle]);
-      // Save the new rectangle to the server
-      fetch('/api/rectangles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newRectangle),
-      }).catch(error => {
-        console.error('Error saving rectangle:', error);
-        // Optionally, handle the error state
-      });
+      // Save rectangles to Local Storage
+      localStorage.setItem('rectangles', JSON.stringify([...rectangles, newRectangle]));
     }
   };
 
@@ -148,12 +139,12 @@ export default function Home() {
     if (isDrawing.current) {
       const rect = canvasRef.current.getBoundingClientRect();
       const ctx = canvasRef.current.getContext('2d');
-      const endX = event.clientX - rect.left;
-      const endY = event.clientY - rect.top;
+      const endX = (event.clientX - rect.left) / scale;
+      const endY = (event.clientY - rect.top) / scale;
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       ctx.strokeStyle = 'red';
       ctx.lineWidth = 2;
-      ctx.strokeRect(startX.current, startY.current, endX - startX.current, endY - startY.current);
+      ctx.strokeRect(startX.current / scale, startY.current / scale, endX - startX.current / scale, endY - startY.current / scale);
     }
   };
 
@@ -230,27 +221,27 @@ export default function Home() {
           </Document>
           <canvas
             ref={canvasRef}
-            width={600}
-            height={800}
+            width={600 * scale}
+            height={800 * scale}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
             style={{ position: 'absolute', top: 0, left: 0, pointerEvents: isCtrlPressed ? 'auto' : 'none' }}
           />
+          {rectangles.map((rect, index) => (
+            <div
+              key={index}
+              style={{
+                position: 'absolute',
+                border: `2px solid ${rect.color}`,
+                left: rect.x * scale,
+                top: rect.y * scale,
+                width: rect.width * scale,
+                height: rect.height * scale,
+              }}
+            />
+          ))}
         </div>
-        {rectangles.map((rect, index) => (
-          <div
-            key={index}
-            style={{
-              position: 'absolute',
-              border: `2px solid ${rect.color}`,
-              left: rect.x,
-              top: rect.y,
-              width: rect.width,
-              height: rect.height,
-            }}
-          />
-        ))}
       </main>
 
       {/* Footer is not included in print */}
