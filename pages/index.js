@@ -10,6 +10,19 @@ const useStyles = makeStyles({
   wrapper: {
     columnGap: '15px',
     display: 'flex',
+    padding: '10px',
+    backgroundColor: '#f3f2f1',
+    borderBottom: '1px solid #e1dfdd',
+    ...shorthands.borderRadius('4px'),
+  },
+  ribbonBar: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px',
+    backgroundColor: '#ffffff',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    ...shorthands.borderRadius('4px'),
   },
 });
 
@@ -153,12 +166,14 @@ export default function Home() {
       </Head>
 
       <main>
-        <div className={buttonStyles.wrapper}>
-          <Button icon={<ZoomInRegular />} onClick={zoomIn}>Zoom In</Button>
-          <Button appearance="primary" icon={<ZoomOutRegular />} onClick={zoomOut}>Zoom Out</Button>
-          <Button appearance="outline" icon={<PreviousRegular />} onClick={goToPrevPage}>Previous Page</Button>
-          <Button appearance="subtle" icon={<NextRegular />} onClick={goToNextPage}>Next Page</Button>
-          <Button appearance="transparent" icon={<DocumentPrintRegular />} onClick={printDocument}>Print</Button>
+        <div className={buttonStyles.ribbonBar}>
+          <div className={buttonStyles.wrapper}>
+            <Button icon={<ZoomInRegular />} onClick={zoomIn}>Zoom In</Button>
+            <Button appearance="primary" icon={<ZoomOutRegular />} onClick={zoomOut}>Zoom Out</Button>
+            <Button appearance="outline" icon={<PreviousRegular />} onClick={goToPrevPage}>Previous Page</Button>
+            <Button appearance="subtle" icon={<NextRegular />} onClick={goToNextPage}>Next Page</Button>
+            <Button appearance="transparent" icon={<DocumentPrintRegular />} onClick={printDocument}>Print</Button>
+          </div>
         </div>
         {console.log('Loading PDF from:', '/example.pdf')}
         <Document
