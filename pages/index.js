@@ -8,6 +8,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 export default function Home() {
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
+  const [scale, setScale] = useState(1.0);
   const [rectangles, setRectangles] = useState([]);
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
@@ -110,6 +111,26 @@ export default function Home() {
     }
   };
 
+  const zoomIn = () => {
+    setScale(scale + 0.1);
+  };
+
+  const zoomOut = () => {
+    setScale(scale - 0.1);
+  };
+
+  const goToPrevPage = () => {
+    setPageNumber(pageNumber > 1 ? pageNumber - 1 : 1);
+  };
+
+  const goToNextPage = () => {
+    setPageNumber(pageNumber < numPages ? pageNumber + 1 : numPages);
+  };
+
+  const printDocument = () => {
+    window.print();
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -118,13 +139,20 @@ export default function Home() {
       </Head>
 
       <main>
+        <div className={styles.controls}>
+          <button onClick={zoomIn}>Zoom In</button>
+          <button onClick={zoomOut}>Zoom Out</button>
+          <button onClick={goToPrevPage}>Previous Page</button>
+          <button onClick={goToNextPage}>Next Page</button>
+          <button onClick={printDocument}>Print</button>
+        </div>
         {console.log('Loading PDF from:', '/example.pdf')}
         <Document
           file="/example.pdf"
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
         >
-          <Page pageNumber={pageNumber} />
+          <Page pageNumber={pageNumber} scale={scale} />
         </Document>
         <canvas
           ref={canvasRef}
@@ -169,6 +197,12 @@ export default function Home() {
           flex-direction: column;
           justify-content: center;
           align-items: center;
+        }
+        .controls {
+          margin-bottom: 1rem;
+        }
+        .controls button {
+          margin-right: 0.5rem;
         }
         footer {
           width: 100%;
