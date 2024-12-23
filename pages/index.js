@@ -240,9 +240,9 @@ export default function Home() {
           </div>
         </div>
         {console.log('Loading PDF from:', '/EXTENDED_Rechnungskorrektur.pdf')}
-        <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', position: 'relative' }}>
           {showPreview && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginRight: '10px' }}>
               {pagePreviews.map((preview, index) => (
                 <img
                   key={index}
@@ -254,35 +254,37 @@ export default function Home() {
               ))}
             </div>
           )}
-          <Document
-            file="/EXTENDED_Rechnungskorrektur.pdf"
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-          >
-            <Page pageNumber={pageNumber} scale={scale} />
-          </Document>
-          <canvas
-            ref={canvasRef}
-            width={600 * scale}
-            height={800 * scale}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            style={{ position: 'absolute', top: 0, left: 0, pointerEvents: isCtrlPressed ? 'auto' : 'none' }}
-          />
-          {rectangles.map((rect, index) => (
-            <div
-              key={index}
-              style={{
-                position: 'absolute',
-                border: `2px solid ${rect.color}`,
-                left: rect.x * scale,
-                top: rect.y * scale,
-                width: rect.width * scale,
-                height: rect.height * scale,
-              }}
+          <div style={{ position: 'relative' }}>
+            <Document
+              file="/EXTENDED_Rechnungskorrektur.pdf"
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+            >
+              <Page pageNumber={pageNumber} scale={scale} />
+            </Document>
+            <canvas
+              ref={canvasRef}
+              width={600 * scale}
+              height={800 * scale}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: isCtrlPressed ? 'auto' : 'none' }}
             />
-          ))}
+            {rectangles.map((rect, index) => (
+              <div
+                key={index}
+                style={{
+                  position: 'absolute',
+                  border: `2px solid ${rect.color}`,
+                  left: rect.x * scale,
+                  top: rect.y * scale,
+                  width: rect.width * scale,
+                  height: rect.height * scale,
+                }}
+              />
+            ))}
+          </div>
         </div>
       </main>
 
