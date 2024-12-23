@@ -45,6 +45,8 @@ export default function Home() {
   const startX = useRef(0);
   const startY = useRef(0);
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
+  const [pagePreviews, setPagePreviews] = useState([]);
 
   const buttonStyles = useStyles();
 
@@ -97,6 +99,26 @@ export default function Home() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
+  }, []);
+
+  useEffect(() => {
+    const loadPagePreviews = async () => {
+      const pdf = await pdfjs.getDocument('/EXTENDED_Rechnungskorrektur.pdf').promise;
+      const previews = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 0.2 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        previews.push(canvas.toDataURL());
+      }
+      setPagePreviews(previews);
+    };
+
+    loadPagePreviews();
   }, []);
 
   const onDocumentLoadSuccess = ({ numPages }) => {
@@ -165,7 +187,7 @@ export default function Home() {
   };
 
   const printDocument = async () => {
-    const pdf = await pdfjs.getDocument('/example.pdf').promise;
+    const pdf = await pdfjs.getDocument('/EXTENDED_Rechnungskorrektur.pdf').promise;
     const printContainer = document.createElement('div');
     document.body.appendChild(printContainer);
 
@@ -193,6 +215,10 @@ export default function Home() {
     document.body.removeChild(printContainer);
   };
 
+  const togglePreview = () => {
+    setShowPreview(!showPreview);
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -208,12 +234,28 @@ export default function Home() {
             <Button appearance="outline" icon={<PreviousRegular />} onClick={goToPrevPage}>Previous Page</Button>
             <Button appearance="subtle" icon={<NextRegular />} onClick={goToNextPage}>Next Page</Button>
             <Button appearance="transparent" icon={<DocumentPrintRegular />} onClick={printDocument}>Print</Button>
+            <Button appearance="transparent" onClick={togglePreview}>
+              {showPreview ? 'Hide Preview' : 'Show Preview'}
+            </Button>
           </div>
         </div>
-        {console.log('Loading PDF from:', '/example.pdf')}
+        {console.log('Loading PDF from:', '/EXTENDED_Rechnungskorrektur.pdf')}
         <div style={{ position: 'relative' }}>
+          {showPreview && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {pagePreviews.map((preview, index) => (
+                <img
+                  key={index}
+                  src={preview}
+                  alt={`Page ${index + 1}`}
+                  style={{ cursor: 'pointer', border: pageNumber === index + 1 ? '2px solid blue' : 'none' }}
+                  onClick={() => setPageNumber(index + 1)}
+                />
+              ))}
+            </div>
+          )}
           <Document
-            file="/example.pdf"
+            file="/EXTENDED_Rechnungskorrektur.pdf"
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
           >
