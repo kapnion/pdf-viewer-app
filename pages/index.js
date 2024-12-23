@@ -219,6 +219,13 @@ export default function Home() {
     setShowPreview(!showPreview);
   };
 
+  const handlePageInputChange = (event) => {
+    const value = parseInt(event.target.value, 10);
+    if (!isNaN(value) && value >= 1 && value <= numPages) {
+      setPageNumber(value);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -232,6 +239,14 @@ export default function Home() {
             <Button icon={<ZoomInRegular />} onClick={zoomIn}>Zoom In</Button>
             <Button appearance="primary" icon={<ZoomOutRegular />} onClick={zoomOut}>Zoom Out</Button>
             <Button appearance="outline" icon={<PreviousRegular />} onClick={goToPrevPage}>Previous Page</Button>
+            <input
+              type="number"
+              value={pageNumber}
+              onChange={handlePageInputChange}
+              min="1"
+              max={numPages}
+              style={{ width: '50px', textAlign: 'center' }}
+            />
             <Button appearance="subtle" icon={<NextRegular />} onClick={goToNextPage}>Next Page</Button>
             <Button appearance="transparent" icon={<DocumentPrintRegular />} onClick={printDocument}>Print</Button>
             <Button appearance="transparent" onClick={togglePreview}>
