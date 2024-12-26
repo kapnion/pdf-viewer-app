@@ -29,6 +29,36 @@ const useStyles = makeStyles({
       display: 'none',
     },
   },
+  viewerContainer: {
+    display: 'flex',
+    position: 'relative',
+    width: '800px', // Fixed width
+    height: '600px', // Fixed height
+    overflow: 'hidden', // Hide overflow to keep the preview fixed
+    border: '1px solid #e1dfdd',
+    ...shorthands.borderRadius('4px'),
+  },
+  previewContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    marginRight: '10px',
+    overflowY: 'auto',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '150px', // Fixed width for preview
+    backgroundColor: '#f3f2f1',
+    zIndex: 1,
+  },
+  documentContainer: {
+    position: 'relative',
+    width: 'calc(100% - 160px)', // Adjust width to account for preview
+    height: '100%',
+    marginLeft: '160px', // Adjust margin to account for preview
+    overflow: 'auto', // Enable scroll bars for document
+  },
 });
 
 import styles from '../styles/Home.module.css';
@@ -176,7 +206,7 @@ export default function Home() {
       // Draw the red rectangle being drawn
       ctx.strokeStyle = 'red'; // Draw in red while drawing
       ctx.lineWidth = 2;
-      ctx.strokeRect(startX.current, startY.current, endX - startX.current, endY - startY.current);
+      ctx.strokeRect(startX.current * scale, startY.current * scale, (endX - startX.current) * scale, (endY - startY.current) * scale);
     }
   };
 
@@ -277,9 +307,9 @@ export default function Home() {
           </div>
         </div>
         {console.log('Loading PDF from:', '/EXTENDED_Rechnungskorrektur.pdf')}
-        <div style={{ display: 'flex', position: 'relative' }}>
+        <div className={buttonStyles.viewerContainer}>
           {showPreview && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginRight: '10px' }}>
+            <div className={buttonStyles.previewContainer}>
               {pagePreviews.map((preview, index) => (
                 <img
                   key={index}
@@ -291,7 +321,7 @@ export default function Home() {
               ))}
             </div>
           )}
-          <div style={{ position: 'relative' }}>
+          <div className={buttonStyles.documentContainer}>
             <Document
               file="/EXTENDED_Rechnungskorrektur.pdf"
               onLoadSuccess={onDocumentLoadSuccess}
@@ -312,17 +342,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer is not included in print */}
-      <footer className={`${buttonStyles.hideOnPrint}`}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel" className={styles.logo} />
-        </a>
-      </footer>
+
 
       <style jsx>{`
         main {
