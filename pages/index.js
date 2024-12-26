@@ -145,10 +145,11 @@ export default function Home() {
       const endX = (event.clientX - rect.left) / scale;
       const endY = (event.clientY - rect.top) / scale;
       const newRectangle = {
-        x: startX.current / scale,
-        y: startY.current / scale,
-        width: (endX - startX.current / scale),
-        height: (endY - startY.current / scale),
+        page: pageNumber,
+        originalX: startX.current,
+        originalY: startY.current,
+        originalWidth: endX - startX.current,
+        originalHeight: endY - startY.current,
         color: 'green',
       };
       setRectangles([...rectangles, newRectangle]);
@@ -164,11 +165,32 @@ export default function Home() {
       const endX = (event.clientX - rect.left) / scale;
       const endY = (event.clientY - rect.top) / scale;
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      ctx.strokeStyle = 'red';
+      
+      // Redraw existing rectangles for the current page
+      rectangles.filter(rect => rect.page === pageNumber).forEach(rect => {
+        ctx.strokeStyle = rect.color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(rect.originalX * scale, rect.originalY * scale, rect.originalWidth * scale, rect.originalHeight * scale);
+      });
+
+      // Draw the red rectangle being drawn
+      ctx.strokeStyle = 'red'; // Draw in red while drawing
       ctx.lineWidth = 2;
-      ctx.strokeRect(startX.current / scale, startY.current / scale, endX - startX.current / scale, endY - startY.current / scale);
+      ctx.strokeRect(startX.current, startY.current, endX - startX.current, endY - startY.current);
     }
   };
+
+  useEffect(() => {
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    
+    // Redraw existing rectangles for the current page
+    rectangles.filter(rect => rect.page === pageNumber).forEach(rect => {
+      ctx.strokeStyle = rect.color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(rect.originalX * scale, rect.originalY * scale, rect.originalWidth * scale, rect.originalHeight * scale);
+    });
+  }, [pageNumber, scale, rectangles]);
 
   const zoomIn = () => {
     setScale(scale + 0.1);
@@ -286,19 +308,6 @@ export default function Home() {
               onMouseMove={handleMouseMove}
               style={{ position: 'absolute', top: 0, left: 0, pointerEvents: isCtrlPressed ? 'auto' : 'none' }}
             />
-            {rectangles.map((rect, index) => (
-              <div
-                key={index}
-                style={{
-                  position: 'absolute',
-                  border: `2px solid ${rect.color}`,
-                  left: rect.x * scale,
-                  top: rect.y * scale,
-                  width: rect.width * scale,
-                  height: rect.height * scale,
-                }}
-              />
-            ))}
           </div>
         </div>
       </main>
