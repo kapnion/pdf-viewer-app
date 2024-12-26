@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { pdfjs, Document, Page } from 'react-pdf';
 import Head from 'next/head';
 import { makeStyles, Button, shorthands } from '@fluentui/react-components';
-import { bundleIcon, CalendarMonthFilled, CalendarMonthRegular, ZoomInRegular, ZoomOutRegular, NextRegular, PreviousRegular, DocumentPrintRegular } from '@fluentui/react-icons';
+import { bundleIcon, CalendarMonthFilled, CalendarMonthRegular, ZoomInRegular, ZoomOutRegular, DocumentPrintRegular } from '@fluentui/react-icons';
 
 const CalendarMonth = bundleIcon(CalendarMonthFilled, CalendarMonthRegular);
 
@@ -52,12 +52,29 @@ const useStyles = makeStyles({
     backgroundColor: '#f3f2f1',
     zIndex: 1,
   },
-  documentContainer: {
+  documentContainerWithPreview: {
     position: 'relative',
     width: 'calc(100% - 160px)', // Adjust width to account for preview
     height: '100%',
     marginLeft: '160px', // Adjust margin to account for preview
     overflow: 'auto', // Enable scroll bars for document
+  },
+  documentContainerWithoutPreview: {
+    position: 'relative',
+    width: '100%', // Full width when preview is hidden
+    height: '100%',
+    marginLeft: '0', // No margin when preview is hidden
+    overflow: 'auto', // Enable scroll bars for document
+  },
+  pageContainer: {
+    position: 'relative',
+    marginBottom: '10px', // Space between pages
+  },
+  canvas: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    pointerEvents: 'none',
   },
 });
 
@@ -67,16 +84,16 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 
 export default function Home() {
   const [numPages, setNumPages] = useState(null);
-  const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
   const [rectangles, setRectangles] = useState([]);
-  const canvasRef = useRef(null);
+  const canvasRefs = useRef([]);
   const isDrawing = useRef(false);
   const startX = useRef(0);
   const startY = useRef(0);
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [pagePreviews, setPagePreviews] = useState([]);
+  const [pageNumber, setPageNumber] = useState(1);
 
   const buttonStyles = useStyles();
 
@@ -159,23 +176,23 @@ export default function Home() {
     console.error('Error loading document:', error);
   };
 
-  const handleMouseDown = (event) => {
+  const handleMouseDown = (event, pageIndex) => {
     if (isCtrlPressed) {
       isDrawing.current = true;
-      const rect = canvasRef.current.getBoundingClientRect();
+      const rect = canvasRefs.current[pageIndex].getBoundingClientRect();
       startX.current = (event.clientX - rect.left) / scale;
       startY.current = (event.clientY - rect.top) / scale;
     }
   };
 
-  const handleMouseUp = (event) => {
+  const handleMouseUp = (event, pageIndex) => {
     if (isDrawing.current) {
       isDrawing.current = false;
-      const rect = canvasRef.current.getBoundingClientRect();
+      const rect = canvasRefs.current[pageIndex].getBoundingClientRect();
       const endX = (event.clientX - rect.left) / scale;
       const endY = (event.clientY - rect.top) / scale;
       const newRectangle = {
-        page: pageNumber,
+        page: pageIndex + 1,
         originalX: startX.current,
         originalY: startY.current,
         originalWidth: endX - startX.current,
@@ -188,16 +205,16 @@ export default function Home() {
     }
   };
 
-  const handleMouseMove = (event) => {
+  const handleMouseMove = (event, pageIndex) => {
     if (isDrawing.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const ctx = canvasRef.current.getContext('2d');
+      const rect = canvasRefs.current[pageIndex].getBoundingClientRect();
+      const ctx = canvasRefs.current[pageIndex].getContext('2d');
       const endX = (event.clientX - rect.left) / scale;
       const endY = (event.clientY - rect.top) / scale;
-      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      ctx.clearRect(0, 0, canvasRefs.current[pageIndex].width, canvasRefs.current[pageIndex].height);
       
       // Redraw existing rectangles for the current page
-      rectangles.filter(rect => rect.page === pageNumber).forEach(rect => {
+      rectangles.filter(rect => rect.page === pageIndex + 1).forEach(rect => {
         ctx.strokeStyle = rect.color;
         ctx.lineWidth = 2;
         ctx.strokeRect(rect.originalX * scale, rect.originalY * scale, rect.originalWidth * scale, rect.originalHeight * scale);
@@ -211,16 +228,18 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    
-    // Redraw existing rectangles for the current page
-    rectangles.filter(rect => rect.page === pageNumber).forEach(rect => {
-      ctx.strokeStyle = rect.color;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(rect.originalX * scale, rect.originalY * scale, rect.originalWidth * scale, rect.originalHeight * scale);
+    canvasRefs.current.forEach((canvas, pageIndex) => {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Redraw existing rectangles for the current page
+      rectangles.filter(rect => rect.page === pageIndex + 1).forEach(rect => {
+        ctx.strokeStyle = rect.color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(rect.originalX * scale, rect.originalY * scale, rect.originalWidth * scale, rect.originalHeight * scale);
+      });
     });
-  }, [pageNumber, scale, rectangles]);
+  }, [numPages, scale, rectangles]);
 
   const zoomIn = () => {
     setScale(scale + 0.1);
@@ -228,14 +247,6 @@ export default function Home() {
 
   const zoomOut = () => {
     setScale(scale - 0.1);
-  };
-
-  const goToPrevPage = () => {
-    setPageNumber(pageNumber > 1 ? pageNumber - 1 : 1);
-  };
-
-  const goToNextPage = () => {
-    setPageNumber(pageNumber < numPages ? pageNumber + 1 : numPages);
   };
 
   const printDocument = async () => {
@@ -271,13 +282,6 @@ export default function Home() {
     setShowPreview(!showPreview);
   };
 
-  const handlePageInputChange = (event) => {
-    const value = parseInt(event.target.value, 10);
-    if (!isNaN(value) && value >= 1 && value <= numPages) {
-      setPageNumber(value);
-    }
-  };
-
   return (
     <div className={styles.container}>
       <Head>
@@ -290,16 +294,6 @@ export default function Home() {
           <div className={buttonStyles.wrapper}>
             <Button icon={<ZoomInRegular />} onClick={zoomIn}>Zoom In</Button>
             <Button appearance="primary" icon={<ZoomOutRegular />} onClick={zoomOut}>Zoom Out</Button>
-            <Button appearance="outline" icon={<PreviousRegular />} onClick={goToPrevPage}>Previous Page</Button>
-            <input
-              type="number"
-              value={pageNumber}
-              onChange={handlePageInputChange}
-              min="1"
-              max={numPages}
-              style={{ width: '50px', textAlign: 'center' }}
-            />
-            <Button appearance="subtle" icon={<NextRegular />} onClick={goToNextPage}>Next Page</Button>
             <Button appearance="transparent" icon={<DocumentPrintRegular />} onClick={printDocument}>Print</Button>
             <Button appearance="transparent" onClick={togglePreview}>
               {showPreview ? 'Hide Preview' : 'Show Preview'}
@@ -321,28 +315,42 @@ export default function Home() {
               ))}
             </div>
           )}
-          <div className={buttonStyles.documentContainer}>
+          <div className={showPreview ? buttonStyles.documentContainerWithPreview : buttonStyles.documentContainerWithoutPreview}>
             <Document
               file="/EXTENDED_Rechnungskorrektur.pdf"
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
             >
-              <Page pageNumber={pageNumber} scale={scale} />
+              {Array.from(new Array(numPages), (el, index) => (
+                <div key={`page_${index + 1}`} className={buttonStyles.pageContainer}>
+                  <Page pageNumber={index + 1} scale={scale} />
+                  <canvas
+                    ref={el => canvasRefs.current[index] = el}
+                    width={600 * scale}
+                    height={800 * scale}
+                    onMouseDown={event => handleMouseDown(event, index)}
+                    onMouseUp={event => handleMouseUp(event, index)}
+                    onMouseMove={event => handleMouseMove(event, index)}
+                    className={buttonStyles.canvas}
+                  />
+                </div>
+              ))}
             </Document>
-            <canvas
-              ref={canvasRef}
-              width={600 * scale}
-              height={800 * scale}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onMouseMove={handleMouseMove}
-              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: isCtrlPressed ? 'auto' : 'none' }}
-            />
           </div>
         </div>
       </main>
 
-
+      {/* Footer is not included in print */}
+      <footer className={`${buttonStyles.hideOnPrint}`}>
+        <a
+          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Powered by{' '}
+          <img src="/vercel.svg" alt="Vercel" className={styles.logo} />
+        </a>
+      </footer>
 
       <style jsx>{`
         main {
