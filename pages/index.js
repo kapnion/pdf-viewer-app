@@ -36,6 +36,7 @@ const useStyles = makeStyles({
     height: '600px', // Fixed height
     overflow: 'hidden', // Hide overflow to keep the preview fixed
     border: '1px solid #e1dfdd',
+    backgroundColor: '#f9f9f9', // Light background color for the entire viewer container
     ...shorthands.borderRadius('4px'),
   },
   previewContainer: {
@@ -68,13 +69,24 @@ const useStyles = makeStyles({
   },
   pageContainer: {
     position: 'relative',
-    marginBottom: '10px', // Space between pages
+    marginBottom: '20px', // Increased space between pages
+    backgroundColor: '#f9f9f9', // Light background color for pages
+    padding: '10px', // Padding around the page
+    ...shorthands.borderRadius('4px'),
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', // Light shadow for page separation
   },
   canvas: {
     position: 'absolute',
     top: 0,
     left: 0,
     pointerEvents: 'none',
+    zIndex: 2, // Ensure the canvas is always on top
+  },
+  drawingCanvas: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 3, // Ensure the drawing canvas is above the PDF canvas
   },
 });
 
@@ -87,6 +99,7 @@ export default function Home() {
   const [scale, setScale] = useState(1.0);
   const [rectangles, setRectangles] = useState([]);
   const canvasRefs = useRef([]);
+  const drawingCanvasRefs = useRef([]);
   const isDrawing = useRef(false);
   const startX = useRef(0);
   const startY = useRef(0);
@@ -110,7 +123,7 @@ export default function Home() {
       .then(data => setRectangles(data))
       .catch(error => {
         console.error('Error fetching rectangles:', error);
-        // Optionally, set an empty array or handle the error state
+        // Skip error and set an empty array
         setRectangles([]);
       });
   }, []);
@@ -136,6 +149,10 @@ export default function Home() {
     const handleKeyUp = (event) => {
       if (event.key === 'Control') {
         setIsCtrlPressed(false);
+        if (isDrawing.current) {
+          isDrawing.current = false;
+          redrawCanvas();
+        }
       }
     };
 
@@ -179,7 +196,7 @@ export default function Home() {
   const handleMouseDown = (event, pageIndex) => {
     if (isCtrlPressed) {
       isDrawing.current = true;
-      const rect = canvasRefs.current[pageIndex].getBoundingClientRect();
+      const rect = drawingCanvasRefs.current[pageIndex].getBoundingClientRect();
       startX.current = (event.clientX - rect.left) / scale;
       startY.current = (event.clientY - rect.top) / scale;
     }
@@ -188,7 +205,7 @@ export default function Home() {
   const handleMouseUp = (event, pageIndex) => {
     if (isDrawing.current) {
       isDrawing.current = false;
-      const rect = canvasRefs.current[pageIndex].getBoundingClientRect();
+      const rect = drawingCanvasRefs.current[pageIndex].getBoundingClientRect();
       const endX = (event.clientX - rect.left) / scale;
       const endY = (event.clientY - rect.top) / scale;
       const newRectangle = {
@@ -199,19 +216,23 @@ export default function Home() {
         originalHeight: endY - startY.current,
         color: 'green',
       };
-      setRectangles([...rectangles, newRectangle]);
-      // Save rectangles to Local Storage
-      localStorage.setItem('rectangles', JSON.stringify([...rectangles, newRectangle]));
+      setRectangles(prevRectangles => {
+        const updatedRectangles = [...prevRectangles, newRectangle];
+        // Save rectangles to Local Storage
+        localStorage.setItem('rectangles', JSON.stringify(updatedRectangles));
+        return updatedRectangles;
+      });
+      redrawCanvas();
     }
   };
 
   const handleMouseMove = (event, pageIndex) => {
     if (isDrawing.current) {
-      const rect = canvasRefs.current[pageIndex].getBoundingClientRect();
-      const ctx = canvasRefs.current[pageIndex].getContext('2d');
+      const rect = drawingCanvasRefs.current[pageIndex].getBoundingClientRect();
+      const ctx = drawingCanvasRefs.current[pageIndex].getContext('2d');
       const endX = (event.clientX - rect.left) / scale;
       const endY = (event.clientY - rect.top) / scale;
-      ctx.clearRect(0, 0, canvasRefs.current[pageIndex].width, canvasRefs.current[pageIndex].height);
+      ctx.clearRect(0, 0, drawingCanvasRefs.current[pageIndex].width, drawingCanvasRefs.current[pageIndex].height);
       
       // Redraw existing rectangles for the current page
       rectangles.filter(rect => rect.page === pageIndex + 1).forEach(rect => {
@@ -227,8 +248,8 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    canvasRefs.current.forEach((canvas, pageIndex) => {
+  const redrawCanvas = () => {
+    drawingCanvasRefs.current.forEach((canvas, pageIndex) => {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
@@ -239,6 +260,10 @@ export default function Home() {
         ctx.strokeRect(rect.originalX * scale, rect.originalY * scale, rect.originalWidth * scale, rect.originalHeight * scale);
       });
     });
+  };
+
+  useEffect(() => {
+    redrawCanvas();
   }, [numPages, scale, rectangles]);
 
   const zoomIn = () => {
@@ -282,6 +307,21 @@ export default function Home() {
     setShowPreview(!showPreview);
   };
 
+  const goToPreviousPage = () => {
+    setPageNumber(prevPageNumber => Math.max(prevPageNumber - 1, 1));
+  };
+
+  const goToNextPage = () => {
+    setPageNumber(prevPageNumber => Math.min(prevPageNumber + 1, numPages));
+  };
+
+  const handlePageNumberChange = (event) => {
+    const newPageNumber = Number(event.target.value);
+    if (newPageNumber >= 1 && newPageNumber <= numPages) {
+      setPageNumber(newPageNumber);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -298,6 +338,16 @@ export default function Home() {
             <Button appearance="transparent" onClick={togglePreview}>
               {showPreview ? 'Hide Preview' : 'Show Preview'}
             </Button>
+            <Button onClick={goToPreviousPage}>Previous Page</Button>
+            <Button onClick={goToNextPage}>Next Page</Button>
+            <input
+              type="number"
+              value={pageNumber}
+              onChange={handlePageNumberChange}
+              min="1"
+              max={numPages}
+            />
+            <span>Page {pageNumber} of {numPages}</span>
           </div>
         </div>
         {console.log('Loading PDF from:', '/EXTENDED_Rechnungskorrektur.pdf')}
@@ -328,10 +378,16 @@ export default function Home() {
                     ref={el => canvasRefs.current[index] = el}
                     width={600 * scale}
                     height={800 * scale}
+                    className={buttonStyles.canvas}
+                  />
+                  <canvas
+                    ref={el => drawingCanvasRefs.current[index] = el}
+                    width={600 * scale}
+                    height={800 * scale}
                     onMouseDown={event => handleMouseDown(event, index)}
                     onMouseUp={event => handleMouseUp(event, index)}
                     onMouseMove={event => handleMouseMove(event, index)}
-                    className={buttonStyles.canvas}
+                    className={buttonStyles.drawingCanvas}
                   />
                 </div>
               ))}
